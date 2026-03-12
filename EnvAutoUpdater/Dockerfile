@@ -16,6 +16,8 @@ COPY . .
 WORKDIR "/src/EnvAutoUpdater"
 RUN dotnet build "./EnvAutoUpdater.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
+RUN apk add --no-cache tzdata
+
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
@@ -25,4 +27,5 @@ RUN dotnet publish "./EnvAutoUpdater.csproj" -c $BUILD_CONFIGURATION -o /app/pub
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+COPY --from=publish /usr/share/zoneinfo /usr/share/zoneinfo
 ENTRYPOINT ["dotnet", "EnvAutoUpdater.dll"]

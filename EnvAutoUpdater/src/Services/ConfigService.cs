@@ -62,7 +62,7 @@ namespace EnvAutoUpdater.src.Services
             this.Config.ServicesToUpdate = services;
             this.Config.CheckInterval = int.TryParse(envVars.GetValueOrDefault("CHECK_INTERVAL"), out int checkInterval) ? checkInterval : 3600;
             this.Config.SaveBackupFile = bool.TryParse(envVars.GetValueOrDefault("SAVE_BACKUP_FILE"), out bool saveBackupFile) ? saveBackupFile : true;
-            this.Config.TZInfo = envVars.GetValueOrDefault("TZ") ?? "UTC";
+            this.Config.TZInfo = (envVars.GetValueOrDefault("TZ") ?? "UTC").Trim();
 
             return Task.FromResult(this.Config);
         }
