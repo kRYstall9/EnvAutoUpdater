@@ -161,8 +161,8 @@ namespace EnvAutoUpdater.src.Services
                     if (!string.IsNullOrEmpty(envVarName))
                     {
                         envVarName = envVarName.Trim().StartsWith('#') ? envVarName.Split('#')[1].Trim() : envVarName; // Handle the case where the variable is commented out by removing the '#' character
-                        
-                        if(envVarName.Contains(' ')) // If the variable name contains spaces, it's likely that it's an example value of a selected env variable, so we skip it
+
+                        if (envVarName.Contains(' ')) // If the variable name contains spaces, it's likely that it's an example value of a selected env variable, so we skip it
                         {
                             _logger.LogDebug($"Skipping line: '{line}' as it is likely an example value of selected env variable due to the presence of spaces in the variable name");
                             continue;
@@ -205,6 +205,8 @@ namespace EnvAutoUpdater.src.Services
 
                     int repoLineIndex = Array.IndexOf(repoEnvContent, repoLine);
 
+                    repoLine = "# " + repoLine; // Comment out the variable line from the repo to avoid issues
+
                     //Expect to find multi line variable values, like a json string, so we need to check for the end of the variable value by looking for the next line that starts with a new variable or is empty or a comment
                     if (repoLineIndex < repoEnvContent.Length - 1)
                     {
@@ -214,14 +216,14 @@ namespace EnvAutoUpdater.src.Services
                             {
                                 break;
                             }
-                            repoLine += "\n" + repoEnvContent[i];
+                            repoLine += "\n# " + repoEnvContent[i];
                         }
                     }
 
                     List<string> commentsFromRepo = [];
 
                     //Add comments and empty lines before the variable from the repo, if they exist, to the list of lines to add to the local env file. We will add them right before the variable line, so we need to find them first
-                    while (repoLineIndex > 0 && (repoEnvContent[repoLineIndex - 1].TrimStart().StartsWith('#') || string.IsNullOrEmpty(repoEnvContent[repoLineIndex - 1].Trim())))
+                    while (repoLineIndex > 0 && repoEnvContent[repoLineIndex - 1].TrimStart().StartsWith('#'))
                     {
                         commentsFromRepo.Insert(0, repoEnvContent[repoLineIndex - 1]);
                         repoLineIndex--;
@@ -233,33 +235,38 @@ namespace EnvAutoUpdater.src.Services
                     {
                         _logger.LogDebug($"Adding missing environment variable '{repoVar}' to the local .env file.");
                         result.AddRange(commentsFromRepo);
-                        result.Add(repoLine);
+                        result.Add(repoLine + "\n");
                     }
                     else if (commentsFromRepo.Count > 0)
                     {
                         _logger.LogDebug($"The environment variable '{repoVar}' is already present in the local .env file. Proceeding to update the comments");
-                        
+
                         var regex = new Regex($@"^#+\s*{Regex.Escape(repoVar)}\s*=", RegexOptions.Singleline);
-                        int localLineIndex = result.FindIndex(line => regex.IsMatch(line));
+                        int localLineIndex = result.FindIndex(line => line.StartsWith(repoVar));
+
+                        if(localLineIndex == -1)
+                        {
+                            localLineIndex = result.FindIndex(line => regex.IsMatch(line));
+                        }
+
                         _logger.LogDebug($"The line index of the variable '{repoVar}' in the local .env file is: {localLineIndex}");
                         if (localLineIndex < 0) continue;
 
-                        while (localLineIndex > 0 && (result[localLineIndex - 1].TrimStart().StartsWith('#') || string.IsNullOrEmpty(result[localLineIndex - 1].Trim())))
+                        while (localLineIndex > 0 && result[localLineIndex - 1].TrimStart().StartsWith('#'))
                         {
                             string prevLine = result[localLineIndex - 1];
                             string prevLineTrimmed = prevLine.TrimStart();
 
-                            _logger.LogDebug($"WHILE BODY - localLineIndex: {localLineIndex}, prevLine: '{prevLine}'");
-
                             bool isEmpty = string.IsNullOrEmpty(prevLineTrimmed);
-                            bool isCommentedVar = localEnvVars.Any(v => {
+                            bool isCommentedVar = localEnvVars.Any(v =>
+                            {
                                 _logger.LogDebug($"ENV VAR: {v} - PREVLINE: {prevLine} - ISMATCH: {Regex.IsMatch(prevLine, $@"^#\s*{Regex.Escape(v)}\s*=")}");
                                 return Regex.IsMatch(prevLine, $@"^#\s*{Regex.Escape(v)}\s*=");
                             });
 
                             bool isPureComment = prevLineTrimmed.StartsWith('#') && !isCommentedVar;
 
-                            if(!isPureComment && !isEmpty)
+                            if (!isPureComment && !isEmpty && !commentsFromRepo.Contains(prevLine, StringComparer.InvariantCultureIgnoreCase))
                             {
                                 _logger.LogDebug($"Stopping the removal of lines before the variable '{repoVar}' at line index {localLineIndex - 1} because the line is not a pure comment or empty line. Line content: '{prevLine}'");
                                 break;
