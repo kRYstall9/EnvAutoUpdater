@@ -178,7 +178,7 @@ namespace EnvAutoUpdater.src.Services
                 }
             }
 
-            return Task.FromResult(envVars.Distinct().ToList());
+            return Task.FromResult(envVars.Where(x => !string.IsNullOrEmpty(x.Trim())).Distinct().ToList());
         }
 
         public Task<List<string>> UpdateEnvFile(List<string> localEnvVars, List<string> repoEnvVars, string[] localEnvContent, string[] repoEnvContent)
@@ -246,6 +246,25 @@ namespace EnvAutoUpdater.src.Services
 
                         while (localLineIndex > 0 && (result[localLineIndex - 1].TrimStart().StartsWith('#') || string.IsNullOrEmpty(result[localLineIndex - 1].Trim())))
                         {
+                            string prevLine = result[localLineIndex - 1];
+                            string prevLineTrimmed = prevLine.TrimStart();
+
+                            _logger.LogDebug($"WHILE BODY - localLineIndex: {localLineIndex}, prevLine: '{prevLine}'");
+
+                            bool isEmpty = string.IsNullOrEmpty(prevLineTrimmed);
+                            bool isCommentedVar = localEnvVars.Any(v => {
+                                _logger.LogDebug($"ENV VAR: {v} - PREVLINE: {prevLine} - ISMATCH: {Regex.IsMatch(prevLine, $@"^#\s*{Regex.Escape(v)}\s*=")}");
+                                return Regex.IsMatch(prevLine, $@"^#\s*{Regex.Escape(v)}\s*=");
+                            });
+
+                            bool isPureComment = prevLineTrimmed.StartsWith('#') && !isCommentedVar;
+
+                            if(!isPureComment && !isEmpty)
+                            {
+                                _logger.LogDebug($"Stopping the removal of lines before the variable '{repoVar}' at line index {localLineIndex - 1} because the line is not a pure comment or empty line. Line content: '{prevLine}'");
+                                break;
+                            }
+
                             result.RemoveAt(localLineIndex - 1);
                             localLineIndex--;
                         }
