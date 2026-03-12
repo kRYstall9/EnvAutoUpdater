@@ -48,7 +48,8 @@ For example:</br>
 `SERVICE2_ENV_REPO_URL`=https://raw.githubusercontent.com/user/repo/refs/heads/main/.env
 
 
-> **Note:** Both standard GitHub URLs (`https://github.com/...`) and raw URLs (`https://raw.githubusercontent.com/...`) are supported. Standard URLs are automatically converted to raw format.
+> [!NOTE] 
+> Both standard GitHub URLs (`https://github.com/...`) and raw URLs (`https://raw.githubusercontent.com/...`) are supported. Standard URLs are automatically converted to raw format.
 
 ---
 
