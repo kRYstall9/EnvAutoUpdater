@@ -30,7 +30,7 @@ var host = Host.CreateDefaultBuilder(args)
         logging.AddFilter("Microsoft", LogLevel.None);
         logging.AddFilter("System", LogLevel.None);
 
-        var logLevelStr = Environment.GetEnvironmentVariable("LOG_LEVEL") ?? "Debug";
+        var logLevelStr = Environment.GetEnvironmentVariable("LOG_LEVEL") ?? "INFORMATION";
         var logLevel = Enum.TryParse<LogLevel>(logLevelStr, true, out var parsedLogLevel) ? parsedLogLevel : LogLevel.Information;
 
         logging.SetMinimumLevel(logLevel);
