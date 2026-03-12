@@ -56,8 +56,7 @@ namespace EnvAutoUpdater.src.Utils
         {
             try
             {
-                var tzId = Environment.GetEnvironmentVariable("TZ_INFO") ?? "UTC";
-                tzId = "Europe/Rome";
+                var tzId = Environment.GetEnvironmentVariable("TZ") ?? "UTC";
                 return TimeZoneInfo.FindSystemTimeZoneById(tzId);
             }
             catch (TimeZoneNotFoundException)
