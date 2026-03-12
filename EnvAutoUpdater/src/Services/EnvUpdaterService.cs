@@ -10,7 +10,7 @@ namespace EnvAutoUpdater.src.Services
         {
             Config config = await _configService.GetConfig();
 
-            if (config.ServicesToUpdate == null || !config.ServicesToUpdate.Any())
+            if (config.ServicesToUpdate == null || config.ServicesToUpdate.Count == 0)
             {
                 _logger.LogWarning("No services configured for .env updates. Skipping update process.");
                 return;
@@ -155,10 +155,18 @@ namespace EnvAutoUpdater.src.Services
                         continue;
                     }
 
-                    string envVarName = line.Trim().Split('=')[0];
+                    string envVarName = line.Split('=')[0].Trim();
 
                     if (!string.IsNullOrEmpty(envVarName))
                     {
+                        envVarName = envVarName.Trim().StartsWith('#') ? envVarName.Split('#')[1].Trim() : envVarName; // Handle the case where the variable is commented out by removing the '#' character
+                        
+                        if(envVarName.Contains(' ')) // If the variable name contains spaces, it's likely that it's an example value of a selected env variable, so we skip it
+                        {
+                            _logger.LogDebug($"Skipping line: '{line}' as it is likely an example value of selected env variable due to the presence of spaces in the variable name");
+                            continue;
+                        }
+
                         envVars.Add(envVarName);
                         _logger.LogDebug($"Extracted environment variable: '{envVarName}' from line: '{line}'.");
                     }
@@ -169,7 +177,7 @@ namespace EnvAutoUpdater.src.Services
                 }
             }
 
-            return Task.FromResult(envVars);
+            return Task.FromResult(envVars.Distinct().ToList());
         }
 
         public Task<List<string>> UpdateEnvFile(List<string> localEnvVars, List<string> repoEnvVars, string[] localEnvContent, string[] repoEnvContent)
@@ -186,7 +194,7 @@ namespace EnvAutoUpdater.src.Services
             {
                 try
                 {
-                    string repoLine = repoEnvContent.FirstOrDefault(line => line.StartsWith(repoVar + "=")) ?? string.Empty;
+                    string repoLine = repoEnvContent.FirstOrDefault(line => line.StartsWith(repoVar)) ?? string.Empty;
 
                     if (string.IsNullOrEmpty(repoLine))
                     {
@@ -222,13 +230,13 @@ namespace EnvAutoUpdater.src.Services
 
                     if (!isVarInLocalEnv)
                     {
-                        _logger.LogInformation($"Adding missing environment variable '{repoVar}' to the local .env file.");
+                        _logger.LogDebug($"Adding missing environment variable '{repoVar}' to the local .env file.");
                         result.AddRange(commentsFromRepo);
                         result.Add(repoLine);
                     }
                     else if (commentsFromRepo.Count > 0)
                     {
-                        _logger.LogInformation($"The environment variable '{repoVar}' is already present in the local .env file. Proceeding to update the comments");
+                        _logger.LogDebug($"The environment variable '{repoVar}' is already present in the local .env file. Proceeding to update the comments");
 
                         int localLineIndex = result.FindIndex(line => line.StartsWith(repoVar + "="));
                         if (localLineIndex < 0) continue;
