@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "EnvAutoUpdater": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
