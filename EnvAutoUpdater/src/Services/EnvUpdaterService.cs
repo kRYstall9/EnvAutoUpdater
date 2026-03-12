@@ -188,7 +188,7 @@ namespace EnvAutoUpdater.src.Services
 
             if (!result.Contains(marker))
             {
-                result.Add("\n\n#-------------- This section was automatically updated by EnvAutoUpdater -----------\n\n");
+                result.Add($"\n\n{marker}\n\n");
             }
 
             foreach (string repoVar in repoEnvVars)
