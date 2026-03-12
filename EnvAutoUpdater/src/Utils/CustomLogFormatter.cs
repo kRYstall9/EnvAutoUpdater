@@ -1,13 +1,15 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using EnvAutoUpdater.src.Services.Interfaces;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.Options;
+using System.Runtime.CompilerServices;
 
 namespace EnvAutoUpdater.src.Utils
 {
-    public class CustomLogFormatter : ConsoleFormatter
+    public class CustomLogFormatter(IOptionsMonitor<SimpleConsoleFormatterOptions> options) : ConsoleFormatter(nameof(CustomLogFormatter))
     {
-        public CustomLogFormatter(IOptionsMonitor<SimpleConsoleFormatterOptions> options) : base(nameof(CustomLogFormatter)){}
+        private static readonly TimeZoneInfo _tz = LoadTimeZone();
 
         public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider? scopeProvider, TextWriter textWriter)
         {
@@ -22,7 +24,7 @@ namespace EnvAutoUpdater.src.Utils
                 _ => ("UNKNOWN", ConsoleColor.White)
             };
 
-            var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            var timestamp = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, _tz).ToString("yyyy-MM-dd HH:mm:ss");
             var category = logEntry.Category?.Split('.').Last();
             var message = logEntry.Formatter(logEntry.State, logEntry.Exception);
 
@@ -49,5 +51,19 @@ namespace EnvAutoUpdater.src.Utils
                 ConsoleColor.White => "\x1B[1m\x1B[37m",
                 _ => "\x1B[39m"
             };
+
+        private static TimeZoneInfo LoadTimeZone()
+        {
+            try
+            {
+                var tzId = Environment.GetEnvironmentVariable("TZ_INFO") ?? "UTC";
+                tzId = "Europe/Rome";
+                return TimeZoneInfo.FindSystemTimeZoneById(tzId);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                return TimeZoneInfo.Utc;
+            }
+        }
     }
 }

@@ -60,10 +60,12 @@ namespace EnvAutoUpdater.src.Services
                     var updatedContent = await UpdateEnvFile(localEnvVars, repoEnvVars, localEnvContent, repoEnvLines);
 
                     #region CREATE BACKUP FILE
-                    //Create a backup env file before writing the updated content, in case something goes wrong during the write process. The backup file will be created in the same directory as the original file with the name format: .env.bak_TIMESTAMP
-                    string backupFilePath = $"{service.EnvLocalFilePath}.bak_{DateTime.Now:yyyyMMddHHmmss}";
-                    await File.WriteAllLinesAsync(backupFilePath, localEnvContent, cancellationToken);
-
+                    if (config.SaveBackupFile)
+                    {
+                        //Create a backup env file before writing the updated content, in case something goes wrong during the write process. The backup file will be created in the same directory as the original file with the name format: .env.bak_TIMESTAMP
+                        string backupFilePath = $"{service.EnvLocalFilePath}.bak_{DateTime.Now:yyyyMMddHHmmss}";
+                        await File.WriteAllLinesAsync(backupFilePath, localEnvContent, cancellationToken);
+                    }
                     #endregion
 
                     await File.WriteAllLinesAsync(service.EnvLocalFilePath!, updatedContent, cancellationToken);
@@ -244,7 +246,7 @@ namespace EnvAutoUpdater.src.Services
                         var regex = new Regex($@"^#+\s*{Regex.Escape(repoVar)}\s*=", RegexOptions.Singleline);
                         int localLineIndex = result.FindIndex(line => line.StartsWith(repoVar));
 
-                        if(localLineIndex == -1)
+                        if (localLineIndex == -1)
                         {
                             localLineIndex = result.FindIndex(line => regex.IsMatch(line));
                         }

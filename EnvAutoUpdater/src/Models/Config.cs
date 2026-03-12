@@ -1,4 +1,6 @@
-﻿namespace EnvAutoUpdater.src.Models
+﻿using System.Text.Json;
+
+namespace EnvAutoUpdater.src.Models
 {
     public class Config
     {
@@ -13,12 +15,18 @@
         /// </summary>
         public int? CheckInterval { get; set; }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether a backup file should be created before updating the .env file
+        /// </summary>
+        public bool SaveBackupFile { get; set; }
+
+        /// <summary>
+        /// Gets or sets the time zone information for logging purposes
+        /// </summary>
+        public string? TZInfo { get; set; }
         public override string ToString()
         {
-            string servicesInfo = ServicesToUpdate != null
-                ? string.Join("\n", ServicesToUpdate.Select(s => s.ServiceName))
-                : "No services configured";
-            return $"Config: ServicesToUpdate=[{servicesInfo}]\nCheckInterval={CheckInterval}";
+            return JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
         }
     }
 }
