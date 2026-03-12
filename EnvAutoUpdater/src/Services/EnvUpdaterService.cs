@@ -149,7 +149,7 @@ namespace EnvAutoUpdater.src.Services
                 try
                 {
                     // Skip empty lines and comments
-                    if (string.IsNullOrEmpty(line.Trim()) || line.TrimStart().StartsWith("#") || !line.TrimStart().Contains('='))
+                    if (string.IsNullOrEmpty(line.Trim()) || !line.TrimStart().Contains('='))
                     {
                         _logger.LogDebug($"Skipping line: '{line}' as it is either empty, a comment or an example value of a previous selected env variable");
                         continue;
