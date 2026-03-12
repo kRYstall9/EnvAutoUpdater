@@ -1,6 +1,7 @@
 ﻿using EnvAutoUpdater.src.Models;
 using EnvAutoUpdater.src.Services.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
 
 namespace EnvAutoUpdater.src.Services
 {
@@ -237,8 +238,10 @@ namespace EnvAutoUpdater.src.Services
                     else if (commentsFromRepo.Count > 0)
                     {
                         _logger.LogDebug($"The environment variable '{repoVar}' is already present in the local .env file. Proceeding to update the comments");
-
-                        int localLineIndex = result.FindIndex(line => line.StartsWith(repoVar + "="));
+                        
+                        var regex = new Regex($@"^#+\s*{Regex.Escape(repoVar)}\s*=", RegexOptions.Singleline);
+                        int localLineIndex = result.FindIndex(line => regex.IsMatch(line));
+                        _logger.LogDebug($"The line index of the variable '{repoVar}' in the local .env file is: {localLineIndex}");
                         if (localLineIndex < 0) continue;
 
                         while (localLineIndex > 0 && (result[localLineIndex - 1].TrimStart().StartsWith('#') || string.IsNullOrEmpty(result[localLineIndex - 1].Trim())))
