@@ -122,7 +122,7 @@ The recommended way to deploy EnvAutoUpdater is via Docker Compose. Create a `do
 ```
 services: 
 	env-auto-updater: 
-	image: envautoupdater:latest 
+	image: krystall0/envautoupdater:latest
 	container_name: env-auto-updater 
 	restart: unless-stopped 
 	volumes: 
