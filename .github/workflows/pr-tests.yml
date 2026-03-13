@@ -19,10 +19,10 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore EnvAutoUpdater.sln
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build EnvAutoUpdater.sln --no-restore --configuration Release
 
       - name: Run Unit & Integration Tests
         run: dotnet test tests/EnvAutoUpdater.Tests/EnvAutoUpdater.Tests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
