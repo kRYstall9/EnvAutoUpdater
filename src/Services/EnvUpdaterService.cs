@@ -101,7 +101,7 @@ namespace EnvAutoUpdater.src.Services
             return Task.FromResult(alreadyUpdated);
         }
 
-        public async Task<string[]> ReadLocalEnvFile(string envFilePath, CancellationToken cancellationToken)
+        public async Task<string[]> ReadLocalEnvFile(string envFilePath, CancellationToken cancellationToken = default)
         {
             string[] localEnvContent;
 
@@ -123,7 +123,7 @@ namespace EnvAutoUpdater.src.Services
             }
         }
 
-        public async Task<string?> ReadUpdatedEnvFileFromRepository(string repoUrl, CancellationToken cancellationToken)
+        public async Task<string?> ReadUpdatedEnvFileFromRepository(string repoUrl, CancellationToken cancellationToken = default)
         {
             if (!repoUrl.StartsWith("https://raw."))
             {
