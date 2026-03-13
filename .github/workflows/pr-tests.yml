@@ -1,0 +1,35 @@
+name: PR Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-and-integration-tests:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore EnvAutoUpdater.sln
+
+      - name: Build
+        run: dotnet build EnvAutoUpdater.sln --no-restore --configuration Release
+
+      - name: Run Unit & Integration Tests
+        run: dotnet test tests/EnvAutoUpdater.Tests/EnvAutoUpdater.Tests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: tests/EnvAutoUpdater.Tests/TestResults/test-results.trx

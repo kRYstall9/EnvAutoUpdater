@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging.Console;
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((_, services) =>
     {
-        services.AddSingleton<IConfigService, ConfigService>();
         services.AddHttpClient<IEnvUpdaterService, EnvUpdaterService>();
         services.AddHostedService<Worker>();
     })
@@ -27,13 +26,16 @@ var host = Host.CreateDefaultBuilder(args)
             options.ColorBehavior = LoggerColorBehavior.Enabled;
         });
 
-        logging.AddFilter("Microsoft", LogLevel.None);
-        logging.AddFilter("System", LogLevel.None);
+        logging.SetMinimumLevel(LogLevel.Trace);
+        logging.AddFilter<ConsoleLoggerProvider>((category, level) =>
+        {
+            if (category?.StartsWith("Microsoft") == true || category?.StartsWith("System") == true)
+                return false;
 
-        var logLevelStr = Environment.GetEnvironmentVariable("LOG_LEVEL") ?? "INFORMATION";
-        var logLevel = Enum.TryParse<LogLevel>(logLevelStr, true, out var parsedLogLevel) ? parsedLogLevel : LogLevel.Information;
-
-        logging.SetMinimumLevel(logLevel);
+            var currentConfig = ConfigLoader.LoadCached();
+            var minLevel = LogLevelHelper.Parse(currentConfig?.LogLevel);
+            return level >= minLevel;
+        });
 
     })
     .Build();

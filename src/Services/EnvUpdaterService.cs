@@ -1,22 +1,30 @@
 ﻿using EnvAutoUpdater.src.Models;
 using EnvAutoUpdater.src.Services.Interfaces;
+using EnvAutoUpdater.src.Utils;
 using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
 
 namespace EnvAutoUpdater.src.Services
 {
-    public class EnvUpdaterService(ILogger<IEnvUpdaterService> _logger, HttpClient _httpClient, IConfigService _configService) : IEnvUpdaterService
+    public class EnvUpdaterService(ILogger<IEnvUpdaterService> _logger, HttpClient _httpClient) : IEnvUpdaterService
     {
-        public async Task RunCheck(CancellationToken cancellationToken = default)
+        public async Task Run(CancellationToken cancellationToken = default)
         {
-            Config config = await _configService.GetConfig();
+            Config? config = await ConfigLoader.Load();
 
-            if (config.ServicesToUpdate == null || !config.ServicesToUpdate.Any())
+            if (config == null)
+            {
+                _logger.LogWarning("Failed to load configuration. Please ensure that the config.json file is present and properly formatted. Skipping the .env update process.");
+                return;
+            }
+
+            if (config.Services == null || config.Services.Count == 0)
             {
                 _logger.LogWarning("No services configured for .env updates. Skipping update process.");
                 return;
             }
 
-            foreach (var service in config.ServicesToUpdate)
+            foreach (var service in config.Services)
             {
                 _logger.LogInformation($"Starting .env update process for service: {service.ServiceName}");
 
@@ -59,10 +67,12 @@ namespace EnvAutoUpdater.src.Services
                     var updatedContent = await UpdateEnvFile(localEnvVars, repoEnvVars, localEnvContent, repoEnvLines);
 
                     #region CREATE BACKUP FILE
-                    //Create a backup env file before writing the updated content, in case something goes wrong during the write process. The backup file will be created in the same directory as the original file with the name format: .env.bak_TIMESTAMP
-                    string backupFilePath = $"{service.EnvLocalFilePath}.bak_{DateTime.Now:yyyyMMddHHmmss}";
-                    await File.WriteAllLinesAsync(backupFilePath, localEnvContent, cancellationToken);
-
+                    if (config.SaveBackupFile)
+                    {
+                        //Create a backup env file before writing the updated content, in case something goes wrong during the write process. The backup file will be created in the same directory as the original file with the name format: .env.bak_TIMESTAMP
+                        string backupFilePath = $"{service.EnvLocalFilePath}.bak_{DateTime.Now:yyyyMMddHHmmss}";
+                        await File.WriteAllLinesAsync(backupFilePath, localEnvContent, cancellationToken);
+                    }
                     #endregion
 
                     await File.WriteAllLinesAsync(service.EnvLocalFilePath!, updatedContent, cancellationToken);
@@ -91,7 +101,7 @@ namespace EnvAutoUpdater.src.Services
             return Task.FromResult(alreadyUpdated);
         }
 
-        public async Task<string[]> ReadLocalEnvFile(string envFilePath, CancellationToken cancellationToken)
+        public async Task<string[]> ReadLocalEnvFile(string envFilePath, CancellationToken cancellationToken = default)
         {
             string[] localEnvContent;
 
@@ -113,7 +123,7 @@ namespace EnvAutoUpdater.src.Services
             }
         }
 
-        public async Task<string?> ReadUpdatedEnvFileFromRepository(string repoUrl, CancellationToken cancellationToken)
+        public async Task<string?> ReadUpdatedEnvFileFromRepository(string repoUrl, CancellationToken cancellationToken = default)
         {
             if (!repoUrl.StartsWith("https://raw."))
             {
@@ -149,16 +159,24 @@ namespace EnvAutoUpdater.src.Services
                 try
                 {
                     // Skip empty lines and comments
-                    if (string.IsNullOrEmpty(line.Trim()) || line.TrimStart().StartsWith("#") || !line.TrimStart().Contains('='))
+                    if (string.IsNullOrEmpty(line.Trim()) || !line.TrimStart().Contains('='))
                     {
                         _logger.LogDebug($"Skipping line: '{line}' as it is either empty, a comment or an example value of a previous selected env variable");
                         continue;
                     }
 
-                    string envVarName = line.Trim().Split('=')[0];
+                    string envVarName = line.Split('=')[0].Trim();
 
                     if (!string.IsNullOrEmpty(envVarName))
                     {
+                        envVarName = envVarName.Trim().StartsWith('#') ? envVarName.Split('#')[1].Trim() : envVarName; // Handle the case where the variable is commented out by removing the '#' character
+
+                        if (envVarName.Contains(' ')) // If the variable name contains spaces, it's likely that it's an example value of a selected env variable, so we skip it
+                        {
+                            _logger.LogDebug($"Skipping line: '{line}' as it is likely an example value of selected env variable due to the presence of spaces in the variable name");
+                            continue;
+                        }
+
                         envVars.Add(envVarName);
                         _logger.LogDebug($"Extracted environment variable: '{envVarName}' from line: '{line}'.");
                     }
@@ -169,7 +187,7 @@ namespace EnvAutoUpdater.src.Services
                 }
             }
 
-            return Task.FromResult(envVars);
+            return Task.FromResult(envVars.Where(x => !string.IsNullOrEmpty(x.Trim())).Distinct().ToList());
         }
 
         public Task<List<string>> UpdateEnvFile(List<string> localEnvVars, List<string> repoEnvVars, string[] localEnvContent, string[] repoEnvContent)
@@ -179,14 +197,14 @@ namespace EnvAutoUpdater.src.Services
 
             if (!result.Contains(marker))
             {
-                result.Add("\n\n#-------------- This section was automatically updated by EnvAutoUpdater -----------\n\n");
+                result.Add($"\n\n{marker}\n\n");
             }
 
             foreach (string repoVar in repoEnvVars)
             {
                 try
                 {
-                    string repoLine = repoEnvContent.FirstOrDefault(line => line.StartsWith(repoVar + "=")) ?? string.Empty;
+                    string repoLine = repoEnvContent.FirstOrDefault(line => line.StartsWith(repoVar)) ?? string.Empty;
 
                     if (string.IsNullOrEmpty(repoLine))
                     {
@@ -195,6 +213,8 @@ namespace EnvAutoUpdater.src.Services
                     }
 
                     int repoLineIndex = Array.IndexOf(repoEnvContent, repoLine);
+
+                    repoLine = "# " + repoLine; // Comment out the variable line from the repo to avoid issues
 
                     //Expect to find multi line variable values, like a json string, so we need to check for the end of the variable value by looking for the next line that starts with a new variable or is empty or a comment
                     if (repoLineIndex < repoEnvContent.Length - 1)
@@ -205,14 +225,14 @@ namespace EnvAutoUpdater.src.Services
                             {
                                 break;
                             }
-                            repoLine += "\n" + repoEnvContent[i];
+                            repoLine += "\n# " + repoEnvContent[i];
                         }
                     }
 
                     List<string> commentsFromRepo = [];
 
                     //Add comments and empty lines before the variable from the repo, if they exist, to the list of lines to add to the local env file. We will add them right before the variable line, so we need to find them first
-                    while (repoLineIndex > 0 && (repoEnvContent[repoLineIndex - 1].TrimStart().StartsWith('#') || string.IsNullOrEmpty(repoEnvContent[repoLineIndex - 1].Trim())))
+                    while (repoLineIndex > 0 && repoEnvContent[repoLineIndex - 1].TrimStart().StartsWith('#'))
                     {
                         commentsFromRepo.Insert(0, repoEnvContent[repoLineIndex - 1]);
                         repoLineIndex--;
@@ -222,19 +242,45 @@ namespace EnvAutoUpdater.src.Services
 
                     if (!isVarInLocalEnv)
                     {
-                        _logger.LogInformation($"Adding missing environment variable '{repoVar}' to the local .env file.");
+                        _logger.LogDebug($"Adding missing environment variable '{repoVar}' to the local .env file.");
                         result.AddRange(commentsFromRepo);
-                        result.Add(repoLine);
+                        result.Add(repoLine + "\n");
                     }
                     else if (commentsFromRepo.Count > 0)
                     {
-                        _logger.LogInformation($"The environment variable '{repoVar}' is already present in the local .env file. Proceeding to update the comments");
+                        _logger.LogDebug($"The environment variable '{repoVar}' is already present in the local .env file. Proceeding to update the comments");
 
-                        int localLineIndex = result.FindIndex(line => line.StartsWith(repoVar + "="));
+                        var regex = new Regex($@"^#+\s*{Regex.Escape(repoVar)}\s*=", RegexOptions.Singleline);
+                        int localLineIndex = result.FindIndex(line => line.StartsWith(repoVar));
+
+                        if (localLineIndex == -1)
+                        {
+                            localLineIndex = result.FindIndex(line => regex.IsMatch(line));
+                        }
+
+                        _logger.LogDebug($"The line index of the variable '{repoVar}' in the local .env file is: {localLineIndex}");
                         if (localLineIndex < 0) continue;
 
-                        while (localLineIndex > 0 && (result[localLineIndex - 1].TrimStart().StartsWith('#') || string.IsNullOrEmpty(result[localLineIndex - 1].Trim())))
+                        while (localLineIndex > 0 && result[localLineIndex - 1].TrimStart().StartsWith('#'))
                         {
+                            string prevLine = result[localLineIndex - 1];
+                            string prevLineTrimmed = prevLine.TrimStart();
+
+                            bool isEmpty = string.IsNullOrEmpty(prevLineTrimmed);
+                            bool isCommentedVar = localEnvVars.Any(v =>
+                            {
+                                _logger.LogDebug($"ENV VAR: {v} - PREVLINE: {prevLine} - ISMATCH: {Regex.IsMatch(prevLine, $@"^#\s*{Regex.Escape(v)}\s*=")}");
+                                return Regex.IsMatch(prevLine, $@"^#\s*{Regex.Escape(v)}\s*=");
+                            });
+
+                            bool isPureComment = prevLineTrimmed.StartsWith('#') && !isCommentedVar;
+
+                            if (!isPureComment && !isEmpty && !commentsFromRepo.Contains(prevLine, StringComparer.InvariantCultureIgnoreCase))
+                            {
+                                _logger.LogDebug($"Stopping the removal of lines before the variable '{repoVar}' at line index {localLineIndex - 1} because the line is not a pure comment or empty line. Line content: '{prevLine}'");
+                                break;
+                            }
+
                             result.RemoveAt(localLineIndex - 1);
                             localLineIndex--;
                         }

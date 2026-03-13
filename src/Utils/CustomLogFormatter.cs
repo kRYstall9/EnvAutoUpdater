@@ -5,9 +5,10 @@ using Microsoft.Extensions.Options;
 
 namespace EnvAutoUpdater.src.Utils
 {
-    public class CustomLogFormatter : ConsoleFormatter
+    public class CustomLogFormatter(IOptionsMonitor<SimpleConsoleFormatterOptions> options) : ConsoleFormatter(nameof(CustomLogFormatter))
     {
-        public CustomLogFormatter(IOptionsMonitor<SimpleConsoleFormatterOptions> options) : base(nameof(CustomLogFormatter)){}
+        private string? _cachedTzId;
+        private TimeZoneInfo _cachedTz = TimeZoneInfo.Utc;
 
         public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider? scopeProvider, TextWriter textWriter)
         {
@@ -22,10 +23,10 @@ namespace EnvAutoUpdater.src.Utils
                 _ => ("UNKNOWN", ConsoleColor.White)
             };
 
-            var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            var tz = GetTimeZone();
+            var timestamp = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, tz).ToString("yyyy-MM-dd HH:mm:ss");
             var category = logEntry.Category?.Split('.').Last();
             var message = logEntry.Formatter(logEntry.State, logEntry.Exception);
-
             textWriter.WriteLine($"{timestamp} {GetForegroundColorEscapeCode(color)}{level}\x1B[0m: [{category}] {message}");
         }
 
@@ -49,5 +50,25 @@ namespace EnvAutoUpdater.src.Utils
                 ConsoleColor.White => "\x1B[1m\x1B[37m",
                 _ => "\x1B[39m"
             };
+
+        private TimeZoneInfo GetTimeZone()
+        {
+            try
+            {
+                var config = ConfigLoader.LoadCached();
+                var tzId = (config?.TZInfo ?? "UTC").Trim();
+
+                if (string.Equals(tzId, _cachedTzId, StringComparison.Ordinal))
+                    return _cachedTz;
+
+                _cachedTzId = tzId;
+                _cachedTz = TimeZoneInfo.FindSystemTimeZoneById(tzId);
+                return _cachedTz;
+            }
+            catch
+            {
+                return TimeZoneInfo.Utc;
+            }
+        }
     }
 }
