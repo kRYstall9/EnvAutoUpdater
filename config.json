@@ -1,0 +1,12 @@
+{
+  "services": [
+    {
+      "name": "Service1",
+      "repositoryEnvUrl": "https://raw.githubusercontent.com/user/repo/refs/heads/main/.env-sample",
+      "localEnvPath": "C:\\path\\to\\local\\.env"
+    }
+  ],
+  "checkInterval": 3600,
+  "saveBackupFile": false,
+  "timezone": "UTC"
+}
