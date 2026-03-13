@@ -7,7 +7,7 @@
         /// </summary>
         /// <param name="cancellationToken">A cancellation token that can be used to cancel the update operation. Optional; defaults to none.</param>
         /// <returns>A task that represents the asynchronous update operation.</returns>
-        Task RunCheck(CancellationToken cancellationToken = default);
+        Task Run(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Reads the contents of a local environment file asynchronously.

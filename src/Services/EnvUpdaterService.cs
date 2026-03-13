@@ -1,23 +1,30 @@
 ﻿using EnvAutoUpdater.src.Models;
 using EnvAutoUpdater.src.Services.Interfaces;
+using EnvAutoUpdater.src.Utils;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 
 namespace EnvAutoUpdater.src.Services
 {
-    public class EnvUpdaterService(ILogger<IEnvUpdaterService> _logger, HttpClient _httpClient, IConfigService _configService) : IEnvUpdaterService
+    public class EnvUpdaterService(ILogger<IEnvUpdaterService> _logger, HttpClient _httpClient) : IEnvUpdaterService
     {
-        public async Task RunCheck(CancellationToken cancellationToken = default)
+        public async Task Run(CancellationToken cancellationToken = default)
         {
-            Config config = await _configService.GetConfig();
+            Config? config = await ConfigLoader.Load();
 
-            if (config.ServicesToUpdate == null || config.ServicesToUpdate.Count == 0)
+            if (config == null)
+            {
+                _logger.LogWarning("Failed to load configuration. Please ensure that the config.json file is present and properly formatted. Skipping the .env update process.");
+                return;
+            }
+
+            if (config.Services == null || config.Services.Count == 0)
             {
                 _logger.LogWarning("No services configured for .env updates. Skipping update process.");
                 return;
             }
 
-            foreach (var service in config.ServicesToUpdate)
+            foreach (var service in config.Services)
             {
                 _logger.LogInformation($"Starting .env update process for service: {service.ServiceName}");
 

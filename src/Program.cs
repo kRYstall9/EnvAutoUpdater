@@ -1,4 +1,5 @@
 ﻿using EnvAutoUpdater.src;
+using EnvAutoUpdater.src.Models;
 using EnvAutoUpdater.src.Services;
 using EnvAutoUpdater.src.Services.Interfaces;
 using EnvAutoUpdater.src.Utils;
@@ -7,10 +8,25 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 
+#region CONFIG LOADING
+Config? config;
+
+try
+{
+    config = await ConfigLoader.Load();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error loading config: {ex.Message}");
+    return;
+}
+#endregion
+
+var logLevel = LogLevelHelper.Parse(config?.LogLevel);
+
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((_, services) =>
     {
-        services.AddSingleton<IConfigService, ConfigService>();
         services.AddHttpClient<IEnvUpdaterService, EnvUpdaterService>();
         services.AddHostedService<Worker>();
     })
@@ -29,10 +45,6 @@ var host = Host.CreateDefaultBuilder(args)
 
         logging.AddFilter("Microsoft", LogLevel.None);
         logging.AddFilter("System", LogLevel.None);
-
-        var logLevelStr = Environment.GetEnvironmentVariable("LOG_LEVEL") ?? "INFORMATION";
-        var logLevel = Enum.TryParse<LogLevel>(logLevelStr, true, out var parsedLogLevel) ? parsedLogLevel : LogLevel.Information;
-
         logging.SetMinimumLevel(logLevel);
 
     })

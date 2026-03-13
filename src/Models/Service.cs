@@ -2,7 +2,7 @@
 
 namespace EnvAutoUpdater.src.Models
 {
-    public class ServiceToUpdate
+    public class Service
     {
         /// <summary>
         /// Gets or sets the name of the service associated with the environment file to be updated

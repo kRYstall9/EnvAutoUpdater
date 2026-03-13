@@ -60,6 +60,7 @@ The service is configured entirely via a `config.json` file located in the appli
 | `saveBackupFile` | `bool` | If `true`, a `.env.bak_TIMESTAMP` backup is created before any update | `true` |
 | `timezone` | `string` | Timezone used for logging timestamps (e.g., `UTC`, `America/New_York`, `Europe/Rome`) | `"UTC"` |
 | `services` | `array` | List of service objects to monitor (see below) | `[]` |
+| `logLevel` | `string` | Logging verbosity level (`Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`). For `Information`, `Warning`, and `Critical`, short forms are also accepted (`info`, `warn`, `crit`). | `info` |
 
 ### Service Configuration
 
@@ -102,7 +103,8 @@ Below is a complete `config.json` example that monitors three different services
 		], 
 	"checkInterval": 1800, 
 	"saveBackupFile": true, 
-	"timezone": "Europe/Rome" 
+	"timezone": "Europe/Rome",
+	"logLevel": "info"
 }
 ```
 
@@ -177,7 +179,7 @@ dotnet run
 
 ## 🔍 How It Works
 
-1. **Read configuration** — loads the list of services to monitor from `config.json` at each iteration (*The config could be changed with no need to restart the container. It's updated content will be read at the next iteration*).
+1. **Read configuration** — loads the list of services to monitor from `config.json` at each iteration (*the config can be changed without restarting the container; its updated content will be read at the next iteration*).
 2. **Read local `.env`** — reads the local file line by line via `ReadLocalEnvFile`.
 3. **Fetch remote `.env`** — downloads the latest `.env` from the configured repository URL via `ReadUpdatedEnvFileFromRepository`.
 4. **Extract variable names** — parses both files via `ReadEnvVariables` to extract environment variable names (lines containing `=`).

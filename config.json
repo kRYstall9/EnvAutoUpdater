@@ -8,5 +8,6 @@
   ],
   "checkInterval": 3600,
   "saveBackupFile": false,
-  "timezone": "UTC"
+  "timezone": "UTC",
+  "logLevel": "info"
 }
