@@ -1,5 +1,4 @@
 ﻿using EnvAutoUpdater.src;
-using EnvAutoUpdater.src.Models;
 using EnvAutoUpdater.src.Services;
 using EnvAutoUpdater.src.Services.Interfaces;
 using EnvAutoUpdater.src.Utils;
@@ -7,22 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
-
-#region CONFIG LOADING
-Config? config;
-
-try
-{
-    config = await ConfigLoader.Load();
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"Error loading config: {ex.Message}");
-    return;
-}
-#endregion
-
-var logLevel = LogLevelHelper.Parse(config?.LogLevel);
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((_, services) =>
@@ -43,9 +26,16 @@ var host = Host.CreateDefaultBuilder(args)
             options.ColorBehavior = LoggerColorBehavior.Enabled;
         });
 
-        logging.AddFilter("Microsoft", LogLevel.None);
-        logging.AddFilter("System", LogLevel.None);
-        logging.SetMinimumLevel(logLevel);
+        logging.SetMinimumLevel(LogLevel.Trace);
+        logging.AddFilter<ConsoleLoggerProvider>((category, level) =>
+        {
+            if (category?.StartsWith("Microsoft") == true || category?.StartsWith("System") == true)
+                return false;
+
+            var currentConfig = ConfigLoader.LoadCached();
+            var minLevel = LogLevelHelper.Parse(currentConfig?.LogLevel);
+            return level >= minLevel;
+        });
 
     })
     .Build();
