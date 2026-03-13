@@ -22,7 +22,8 @@ namespace EnvAutoUpdater.src
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                await _envUpdaterService.Run();
+                config = ConfigLoader.LoadCached() ?? config;
+                await _envUpdaterService.Run(stoppingToken);
                 var next = DateTime.Now.AddSeconds(config.CheckInterval);
 
                 _logger.LogInformation($"Next execution: {next}");
