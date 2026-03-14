@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/kRYstall9/EnvAutoUpdater/compare/v1.0.1...v1.0.2) (2026-03-14)
+
+
+### Bug Fixes
+
+* next execution datetime now matches user-defined timezone ([#7](https://github.com/kRYstall9/EnvAutoUpdater/issues/7)) ([8ae8c44](https://github.com/kRYstall9/EnvAutoUpdater/commit/8ae8c4449c931a383da77f4e2476fb4bcd9ae431))
+
 ## [1.0.1](https://github.com/kRYstall9/EnvAutoUpdater/compare/v1.0.0...v1.0.1) (2026-03-14)
 
 
