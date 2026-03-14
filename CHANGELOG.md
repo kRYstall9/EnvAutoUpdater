@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/kRYstall9/EnvAutoUpdater/compare/v1.0.0...v1.0.1) (2026-03-14)
+
+
+### Bug Fixes
+
+* improve .env var handling and update build exclusions ([#3](https://github.com/kRYstall9/EnvAutoUpdater/issues/3)) ([a1c79c4](https://github.com/kRYstall9/EnvAutoUpdater/commit/a1c79c4500940f7c23ba1a68ec4856af51b5334e))
+* improve .env var handling and update build exclusions ([#6](https://github.com/kRYstall9/EnvAutoUpdater/issues/6)) ([71ca4e3](https://github.com/kRYstall9/EnvAutoUpdater/commit/71ca4e3d5aee718751ffcb70f54150aa16619268))
+
 # 1.0.0 (2026-03-13)
 
 
