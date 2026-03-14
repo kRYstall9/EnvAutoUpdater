@@ -18,17 +18,20 @@ namespace EnvAutoUpdater.src
                 return;
             }
 
-            _logger.LogInformation($"Config: {config!.ToString()}");
+            _logger.LogInformation($"Config: {config}");
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 config = ConfigLoader.LoadCached() ?? config;
                 await _envUpdaterService.Run(stoppingToken);
-                var next = DateTime.Now.AddSeconds(config.CheckInterval);
 
-                _logger.LogInformation($"Next execution: {next}");
+                var tz = ConfigLoader.GetTimeZone(config.TZInfo);
+                var next = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow.AddSeconds(config.CheckInterval), tz);
 
-                var delay = Math.Max(0, (int)(next - DateTime.Now).TotalMilliseconds);
+                _logger.LogInformation($"Next execution: {next:yyyy-MM-dd HH:mm:ss}");
+
+                var delay = (int)Math.Min(Math.Max(0, (long)(next - DateTimeOffset.UtcNow).TotalMilliseconds), int.MaxValue);
+
                 await Task.Delay(delay, stoppingToken);
             }
         }

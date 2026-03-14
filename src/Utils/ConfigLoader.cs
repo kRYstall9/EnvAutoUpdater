@@ -10,6 +10,9 @@ namespace EnvAutoUpdater.src.Utils
         private static readonly TimeSpan _cacheDuration = TimeSpan.FromSeconds(5);
         private static readonly Lock _lock = new();
 
+        private static string? _cachedTzId;
+        private static TimeZoneInfo _cachedTz = TimeZoneInfo.Utc;
+
         public static async Task<Config?> Load(string path = "config.json")
         {
             try
@@ -50,6 +53,25 @@ namespace EnvAutoUpdater.src.Utils
                 {
                     return _cachedConfig;
                 }
+            }
+        }
+
+        public static TimeZoneInfo GetTimeZone(string? tzId = null)
+        {
+            try
+            {
+                var id = (tzId ?? LoadCached()?.TZInfo ?? "UTC").Trim();
+
+                if (string.Equals(id, _cachedTzId, StringComparison.Ordinal))
+                    return _cachedTz;
+
+                _cachedTzId = id;
+                _cachedTz = TimeZoneInfo.FindSystemTimeZoneById(id);
+                return _cachedTz;
+            }
+            catch
+            {
+                return TimeZoneInfo.Utc;
             }
         }
     }
