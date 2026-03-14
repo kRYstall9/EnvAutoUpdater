@@ -204,7 +204,14 @@ namespace EnvAutoUpdater.src.Services
             {
                 try
                 {
+                    var regex = new Regex($@"^#+\s*{Regex.Escape(repoVar)}\s*=", RegexOptions.Singleline);
                     string repoLine = repoEnvContent.FirstOrDefault(line => line.StartsWith(repoVar)) ?? string.Empty;
+
+                    if (string.IsNullOrEmpty(repoLine))
+                    {
+                        _logger.LogDebug($"The variable {repoVar} might be commented out. Retrying");
+                        repoLine = repoEnvContent.FirstOrDefault(line => regex.IsMatch(line)) ?? string.Empty;
+                    }
 
                     if (string.IsNullOrEmpty(repoLine))
                     {
@@ -214,7 +221,7 @@ namespace EnvAutoUpdater.src.Services
 
                     int repoLineIndex = Array.IndexOf(repoEnvContent, repoLine);
 
-                    repoLine = "# " + repoLine; // Comment out the variable line from the repo to avoid issues
+                    repoLine = repoLine.TrimStart().StartsWith('#') ? repoLine : "# " + repoLine; // Comment out the variable line from the repo to avoid issues
 
                     //Expect to find multi line variable values, like a json string, so we need to check for the end of the variable value by looking for the next line that starts with a new variable or is empty or a comment
                     if (repoLineIndex < repoEnvContent.Length - 1)
@@ -225,7 +232,7 @@ namespace EnvAutoUpdater.src.Services
                             {
                                 break;
                             }
-                            repoLine += "\n# " + repoEnvContent[i];
+                            repoLine += repoEnvContent[i].TrimStart().StartsWith('#') ? repoEnvContent[i] : "\n# " + repoEnvContent[i];
                         }
                     }
 
@@ -250,7 +257,6 @@ namespace EnvAutoUpdater.src.Services
                     {
                         _logger.LogDebug($"The environment variable '{repoVar}' is already present in the local .env file. Proceeding to update the comments");
 
-                        var regex = new Regex($@"^#+\s*{Regex.Escape(repoVar)}\s*=", RegexOptions.Singleline);
                         int localLineIndex = result.FindIndex(line => line.StartsWith(repoVar));
 
                         if (localLineIndex == -1)
