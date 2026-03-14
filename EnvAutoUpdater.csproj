@@ -11,6 +11,15 @@
   <ItemGroup>
     <Compile Remove="tests\**" />
     <None Remove="tests\**" />
+    <Compile Remove="node_modules\**" />
+    <None Remove="node_modules\**" />
+    <Compile Remove="EnvAutoUpdater\**" />
+    <None Remove="EnvAutoUpdater\**" />
+    <EmbeddedResource Remove="EnvAutoUpdater\**" />
+    <Compile Remove="bin\**" />
+    <None Remove="bin\**" />
+    <EmbeddedResource Remove="bin\**" />
+    <Compile Remove="obj\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>
