@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/kRYstall9/EnvAutoUpdater/compare/v1.0.2...v1.0.3) (2026-03-19)
+
+
+### Bug Fixes
+
+* prevent duplicate comment lines in .env sync ([#8](https://github.com/kRYstall9/EnvAutoUpdater/issues/8)) ([effd140](https://github.com/kRYstall9/EnvAutoUpdater/commit/effd140d620e918d286aa3e0193e5b0124afbee4))
+
 ## [1.0.2](https://github.com/kRYstall9/EnvAutoUpdater/compare/v1.0.1...v1.0.2) (2026-03-14)
 
 
