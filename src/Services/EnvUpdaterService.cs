@@ -200,6 +200,8 @@ namespace EnvAutoUpdater.src.Services
                 result.Add($"\n\n{marker}\n\n");
             }
 
+            var seenCommentLines = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
             foreach (string repoVar in repoEnvVars)
             {
                 try
@@ -250,6 +252,26 @@ namespace EnvAutoUpdater.src.Services
                     if (!isVarInLocalEnv)
                     {
                         _logger.LogDebug($"Adding missing environment variable '{repoVar}' to the local .env file.");
+
+                        foreach (string comment in commentsFromRepo)
+                        {
+                            string trimmed = comment.TrimEnd();
+                            if (!seenCommentLines.Add(trimmed))
+                            {
+                                int commentIndex = result.FindIndex(x => string.Equals(x.Trim(), comment.Trim()));
+                                if(commentIndex >= 0)
+                                {
+                                    _logger.LogDebug($"Removing {result[commentIndex]} as it is a duplicate");
+                                    result.RemoveAt(commentIndex);
+                                }
+                            }
+                        }
+
+                        if (repoLine.TrimStart().StartsWith('#'))
+                        {
+                            seenCommentLines.Add(repoLine);
+                        }
+
                         result.AddRange(commentsFromRepo);
                         result.Add(repoLine + "\n");
                     }
@@ -299,6 +321,7 @@ namespace EnvAutoUpdater.src.Services
                     _logger.LogError($"An error occurred while trying to update the local .env file with the variable '{repoVar}'. Exception: {ex.Message}");
                 }
             }
+
             return Task.FromResult(result);
         }
     }
